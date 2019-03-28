@@ -7,13 +7,15 @@
 
 import asyncio
 import os
+import platform
 import re
 import signal
 import sys
 import time
+from contextlib import suppress
 from functools import partial
 
-from aiorpcx import spawn
+from aiorpcx import spawn, CancelledError
 
 from electrumx.lib.util import class_logger
 
@@ -50,7 +52,9 @@ class ServerBase(object):
             mvs = '.'.join(str(part) for part in self.PYTHON_MIN_VERSION)
             raise RuntimeError('Python version >= {} is required'.format(mvs))
 
-        if os.geteuid() == 0 and not env.allow_root:
+        if platform.system() == 'Windows':
+            pass
+        elif os.geteuid() == 0 and not env.allow_root:
             raise RuntimeError('RUNNING AS ROOT IS STRONGLY DISCOURAGED!\n'
                                'You shoud create an unprivileged user account '
                                'and use that.\n'
@@ -88,26 +92,32 @@ class ServerBase(object):
                                 f'initiating shutdown')
 
         self.start_time = time.time()
-        for signame in ('SIGINT', 'SIGTERM'):
-            loop.add_signal_handler(getattr(signal, signame),
-                                    partial(on_signal, signame))
+        if platform.system() == 'Windows':
+            pass  # No signals on Windows
+        else:
+            for signame in ('SIGINT', 'SIGTERM'):
+                loop.add_signal_handler(getattr(signal, signame),
+                                        partial(on_signal, signame))
         loop.set_exception_handler(self.on_exception)
 
         shutdown_event = asyncio.Event()
         server_task = await spawn(self.serve(shutdown_event))
+
         # Wait for shutdown, log on receipt of the event
         await shutdown_event.wait()
         self.logger.info('shutting down')
+
         server_task.cancel()
-
-        # Prevent some silly logs
-        await asyncio.sleep(0.01)
-
+        with suppress(CancelledError):
+            await server_task
         self.logger.info('shutdown complete')
 
     def run(self):
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(self._main(loop))
+        except KeyboardInterrupt:
+            self.logger.info(f'received interrupt signal, '
+                             f'initiating shutdown')
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())

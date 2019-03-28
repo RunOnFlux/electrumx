@@ -9,7 +9,6 @@
 
 
 import re
-import resource
 from collections import namedtuple
 from ipaddress import ip_address
 
@@ -68,13 +67,14 @@ class Env(EnvBase):
         # The electrum client takes the empty string as unspecified
         self.donation_address = self.default('DONATION_ADDRESS', '')
         # Server limits to help prevent DoS
-        self.max_send = self.integer('MAX_SEND', 1000000)
+        self.max_send = self.integer('MAX_SEND', self.coin.DEFAULT_MAX_SEND)
         self.max_subs = self.integer('MAX_SUBS', 250000)
         self.max_sessions = self.sane_max_sessions()
         self.max_session_subs = self.integer('MAX_SESSION_SUBS', 50000)
         self.bandwidth_limit = self.integer('BANDWIDTH_LIMIT', 2000000)
         self.session_timeout = self.integer('SESSION_TIMEOUT', 600)
         self.drop_client = self.custom("DROP_CLIENT", None, re.compile)
+        self.blacklist_url = self.default('BLACKLIST_URL', self.coin.BLACKLIST_URL)
 
         # Identities
         clearnet_identity = self.clearnet_identity()
@@ -88,13 +88,18 @@ class Env(EnvBase):
         is MAX_SESSIONS.  However, to prevent open file exhaustion, ajdust
         downwards if running with a small open file rlimit.'''
         env_value = self.integer('MAX_SESSIONS', 1000)
-        nofile_limit = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
-        # We give the DB 250 files; allow ElectrumX 100 for itself
-        value = max(0, min(env_value, nofile_limit - 350))
-        if value < env_value:
-            self.logger.warning('lowered maximum sessions from {:,d} to {:,d} '
-                                'because your open file limit is {:,d}'
-                                .format(env_value, value, nofile_limit))
+        # No resource module on Windows
+        try:
+            import resource
+            nofile_limit = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
+            # We give the DB 250 files; allow ElectrumX 100 for itself
+            value = max(0, min(env_value, nofile_limit - 350))
+            if value < env_value:
+                self.logger.warning('lowered maximum sessions from {:,d} to {:,d} '
+                                    'because your open file limit is {:,d}'
+                                    .format(env_value, value, nofile_limit))
+        except ImportError:
+            value = 512  # that is what returned by stdio's _getmaxstdio()
         return value
 
     def clearnet_identity(self):
