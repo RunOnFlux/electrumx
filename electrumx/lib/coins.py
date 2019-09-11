@@ -3269,3 +3269,31 @@ class XayaRegtest(XayaTestnet):
     GENESIS_HASH = ('6f750b36d22f1dc3d0a6e483af453010'
                     '22646dfc3b3ba2187865f5a7d6d83ab1')
     RPC_PORT = 18493
+
+class SIN(Coin):
+    NAME = "SIN"
+    SHORTNAME = "SIN"
+    NET = "mainnet"
+    BASIC_HEADER_SIZE = 80
+    P2PKH_VERBYTE = bytes.fromhex("3f")
+    P2SH_VERBYTES = [bytes.fromhex("05")]
+    WIF_BYTE = bytes.fromhex("bf")
+    GENESIS_HASH = ('000032bd27c65ec42967b7854a49df22'
+                    '2abdfae8d9350a61083af8eab2a25e03')
+    DESERIALIZER = lib_tx.DeserializerSegWit
+    TX_COUNT = 65326
+    TX_COUNT_HEIGHT = 25000
+    TX_PER_BLOCK = 2
+
+    @classmethod
+    def header_hash(cls, header):
+        import x22i_hash, x25x_hash
+        x22i_pow=x22i_hash.getPoWHash(header)
+        # print ('-------------------------------')
+        # print (' Header:', bytes(header).hex())
+        # print ('    x22:', bytes(reversed(x22i_pow)).hex())
+        # print ('    x25:', bytes(reversed(x25x_hash.getPoWHash(header))).hex())
+        # if '000' in (hash_to_hex_str(x22i_pow)[:3]):
+        return x22i_pow
+        # else:
+        #   return x25x_hash.getPoWHash(header)
