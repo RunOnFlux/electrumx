@@ -3287,7 +3287,7 @@ class SIN(Coin):
 
     @classmethod
     def header_hash(cls, header):
-        import x22i_hash, x25x_hash
+        import x22i_hash
         x22i_pow=x22i_hash.getPoWHash(header)
         # print ('-------------------------------')
         # print (' Header:', bytes(header).hex())
