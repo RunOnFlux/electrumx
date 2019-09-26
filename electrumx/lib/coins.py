@@ -2815,21 +2815,24 @@ class Ravencoin(Coin):
     GENESIS_HASH = ('0000006b444bc2f2ffe627be9d9e7e7a'
                     '0730000870ef6eb6da46c8eae389df90')
     DESERIALIZER = lib_tx.DeserializerSegWit
-    TX_COUNT = 3911020
-    TX_COUNT_HEIGHT = 602000
-    TX_PER_BLOCK = 4
+    X16RV2_ACTIVATION_TIME = 1569945600  # algo switch to x16rv2 at this timestamp
+    TX_COUNT = 5626682
+    TX_COUNT_HEIGHT = 887000
+    TX_PER_BLOCK = 6
     RPC_PORT = 8766
     REORG_LIMIT = 55
-    PEERS = [
-        'rvn.satoshi.org.uk s t',
-        'electrum-rvn.minermore.com s t',
-        '153.126.197.243 s t'
-    ]
+    PEERS = []
+
     @classmethod
     def header_hash(cls, header):
         '''Given a header return the hash.'''
-        import x16r_hash
-        return x16r_hash.getPoWHash(header)
+        timestamp = util.unpack_le_uint32_from(header, 68)[0]
+        if timestamp >= cls.X16RV2_ACTIVATION_TIME:
+            import x16rv2_hash
+            return x16rv2_hash.getPoWHash(header)
+        else:
+            import x16r_hash
+            return x16r_hash.getPoWHash(header)
 
 
 class RavencoinTestnet(Ravencoin):
@@ -2946,9 +2949,27 @@ class Bitcoinzero(Coin):
     P2PKH_VERBYTE = bytes.fromhex("4b")
     P2SH_VERBYTES = [bytes.fromhex("22")]
     WIF_BYTE = bytes.fromhex("d2")
-    RPC_PORT = 29200
+    RPC_PORT = 29202
     REORG_LIMIT = 5000
-    PEERS = [
-        'electrum.bitcoinzerox.net s t',
-        'electrum2.bitcoinzerox.net s t'
-    ]
+    PEERS = []
+
+class SIN(Coin):
+    NAME = "SIN"
+    SHORTNAME = "SIN"
+    NET = "mainnet"
+    BASIC_HEADER_SIZE = 80
+    P2PKH_VERBYTE = bytes.fromhex("3f")
+    P2SH_VERBYTES = [bytes.fromhex("05")]
+    WIF_BYTE = bytes.fromhex("bf")
+    GENESIS_HASH = ('000032bd27c65ec42967b7854a49df22'
+                    '2abdfae8d9350a61083af8eab2a25e03')
+    DESERIALIZER = lib_tx.DeserializerSegWit
+    TX_COUNT = 65326
+    TX_COUNT_HEIGHT = 25000
+    TX_PER_BLOCK = 2
+
+    @classmethod
+    def header_hash(cls, header):
+        import x22i_hash
+        x22i_pow=x22i_hash.getPoWHash(header)
+        return x22i_pow
