@@ -3270,6 +3270,7 @@ class XayaRegtest(XayaTestnet):
                     '22646dfc3b3ba2187865f5a7d6d83ab1')
     RPC_PORT = 18493
 
+
 class SIN(Coin):
     NAME = "SIN"
     SHORTNAME = "SIN"
@@ -3297,3 +3298,34 @@ class SIN(Coin):
         return x22i_pow
         # else:
         #   return x25x_hash.getPoWHash(header)
+
+class Genesis(EquihashMixin, Coin):
+    NAME = "Genesis"
+    SHORTNAME = "GENX"
+    NET = "mainnet"
+    P2PKH_VERBYTE = bytes.fromhex("1C")
+    P2SH_VERBYTES = [bytes.fromhex("3F")]
+    WIF_BYTE = bytes.fromhex("30")
+    GENESIS_HASH = ('00015cb28cab26f2d4385a4bc261d3c8'
+                    '8d6cafbc489dc26e6e752456f90dd26b')
+    DESERIALIZER = lib_tx.DeserializerEquihashSegWit
+    XPUB_VERBYTES = bytes.fromhex("53414645")
+    XPRV_VERBYTES = bytes.fromhex("53616665")
+    TX_COUNT = 357296
+    TX_COUNT_HEIGHT = 135851
+    TX_PER_BLOCK = 3
+    RPC_PORT = 7234
+    REORG_LIMIT = 800
+
+    @classmethod
+    def header_hash(cls, header):
+        '''Given a header return hash'''
+        height, = util.unpack_le_uint32_from(header, 68)
+        return double_sha256(header)
+
+    @classmethod
+    def electrum_header(cls, header, height):
+        h = super().electrum_header(header, height)
+        h['reserved'] = hash_to_hex_str(header[72:100])
+        h['solution'] = hash_to_hex_str(header[140:])
+        return h
