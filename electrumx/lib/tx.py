@@ -387,6 +387,105 @@ class DeserializerZcash(DeserializerEquihash):
         return base_tx
 
 
+class TxZelNodeStart(namedtuple("Tx", "version type collateralOutHash collateralOutIndex collateralPublicKey publicKey sigTime IP sig")):
+    '''Class representing a ZelNode start transaction.'''
+
+
+class TxZelNodeConfirm(namedtuple("Tx", "version type collateralOutHash collateralOutIndex sigTime benchmarkTier benchmarkSigTime nUpdateType sig benchmarkSig")):
+    '''Class representing a ZelNode confirm transaction.'''
+
+
+class TxZelNode(namedtuple("Tx", "version type")):
+    '''Class representing a ZelNode transaction.'''
+
+
+class DeserializerZelCash(DeserializerEquihash):
+    def read_tx(self):
+        header = self._read_le_uint32()
+        overwintered = ((header >> 31) == 1)
+        if overwintered:
+            version = header & 0x7fffffff
+            self.cursor += 4  # versionGroupId
+        else:
+            version = header
+
+        is_overwinter_v3 = version == 3
+        is_sapling_v4 = version == 4
+        is_zelnode_v5 = version == 5
+
+        ZELNODE_START_TX_TYPE = 2;
+        ZELNODE_CONFIRM_TX_TYPE = 4;
+
+        if is_zelnode_v5:
+            type = self._read_varint()
+
+            zelnode_tx = TxZelNode(
+                version,
+                type
+            )
+
+            if type == ZELNODE_START_TX_TYPE:
+                self.cursor += 32 # collateralOutHash
+                self.cursor += 4 # collateralOutIndex readUInt32LE
+                collateral_public_key_size = self._read_varint()
+                self.cursor += collateral_public_key_size # collateralPublicKey
+                public_key_size = self._read_varint()
+                self.cursor += public_key_size # publicKey
+                self.cursor += 8 # sigTime readUInt64LE
+                ip_size = self._read_varint()
+                self.cursor += ip_size # IP
+                sig_size = self._read_varint()
+                self.cursor += sig_size # sig
+
+            if type == ZELNODE_CONFIRM_TX_TYPE:
+                self.cursor += 32 # collateralOutHash
+                self.cursor += 4 # collateralOutIndex readUInt32LE
+                self.cursor += 8 # sigTime readUInt64LE
+                self.cursor += 1 # benchmarkTier
+                self.cursor += 8 # benchmarkSigTime readUInt64LE
+                self.cursor += 1 # nUpdateType
+                sig_size = self._read_varint()
+                self.cursor += sig_size # sig
+                benchmark_sig_size = self._read_varint()
+                self.cursor += benchmark_sig_size # benchmarkSig
+
+            return zelnode_tx
+
+        else:
+            base_tx = TxJoinSplit(
+                version,
+                self._read_inputs(),    # inputs
+                self._read_outputs(),   # outputs
+                self._read_le_uint32()  # locktime
+            )
+
+            if is_overwinter_v3 or is_sapling_v4:
+                self.cursor += 4  # expiryHeight
+
+            has_shielded = False
+            if is_sapling_v4:
+                self.cursor += 8  # valueBalance
+                shielded_spend_size = self._read_varint()
+                self.cursor += shielded_spend_size * 384  # vShieldedSpend
+                shielded_output_size = self._read_varint()
+                self.cursor += shielded_output_size * 948  # vShieldedOutput
+                has_shielded = shielded_spend_size > 0 or shielded_output_size > 0
+
+            if base_tx.version >= 2:
+                joinsplit_size = self._read_varint()
+                if joinsplit_size > 0:
+                    joinsplit_desc_len = 1506 + (192 if is_sapling_v4 else 296)
+                    # JSDescription
+                    self.cursor += joinsplit_size * joinsplit_desc_len
+                    self.cursor += 32  # joinSplitPubKey
+                    self.cursor += 64  # joinSplitSig
+
+            if is_sapling_v4 and has_shielded:
+                self.cursor += 64  # bindingSig
+
+            return base_tx
+
+
 class TxTime(namedtuple("Tx", "version time inputs outputs locktime")):
     '''Class representing transaction that has a time field.'''
 
