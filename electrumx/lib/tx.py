@@ -426,10 +426,8 @@ class DeserializerZelCash(DeserializerEquihash):
                 sig_time = self._read_le_int64()# sigTime
                 ip = self._read_varbytes() # IP
                 sig = self._read_varbytes() # sig
-                print(ip)
-                print(sig)
 
-                zelnode_tx_start = TxZelNode(
+                zelnode_tx_start = TxZelNodeStart(
                     version,
                     inputs,
                     outputs,
@@ -438,6 +436,7 @@ class DeserializerZelCash(DeserializerEquihash):
                     collateral_out_hash,
                     collateral_out_index,
                     collateral_public_key,
+                    public_key,
                     sig_time,
                     ip,
                     sig
@@ -455,7 +454,7 @@ class DeserializerZelCash(DeserializerEquihash):
                 sig = self._read_varbytes() # sig
                 benchmark_sig = self._read_varbytes() # benchmarkSig
 
-                zelnode_tx_confirm = TxZelNode(
+                zelnode_tx_confirm = TxZelNodeConfirm(
                     version,
                     inputs,
                     outputs,
