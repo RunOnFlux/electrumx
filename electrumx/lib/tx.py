@@ -387,16 +387,12 @@ class DeserializerZcash(DeserializerEquihash):
         return base_tx
 
 
-class TxZelNodeStart(namedtuple("Tx", "version type collateralOutHash collateralOutIndex collateralPublicKey publicKey sigTime IP sig")):
+class TxZelNodeStart(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index collateral_public_key public_key sig_time ip sig")):
     '''Class representing a ZelNode start transaction.'''
 
 
-class TxZelNodeConfirm(namedtuple("Tx", "version type collateralOutHash collateralOutIndex sigTime benchmarkTier benchmarkSigTime nUpdateType sig benchmarkSig")):
+class TxZelNodeConfirm(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index sig_time benchmark_tier benchmark_sig_time update_type sig benchmark_sig")):
     '''Class representing a ZelNode confirm transaction.'''
-
-
-class TxZelNode(namedtuple("Tx", "version type")):
-    '''Class representing a ZelNode transaction.'''
 
 
 class DeserializerZelCash(DeserializerEquihash):
@@ -418,38 +414,64 @@ class DeserializerZelCash(DeserializerEquihash):
 
         if is_zelnode_v5:
             type = self._read_varint()
-
-            zelnode_tx = TxZelNode(
-                version,
-                type
-            )
+            inputs = []
+            outputs = []
+            locktime = 0
 
             if type == ZELNODE_START_TX_TYPE:
-                self.cursor += 32 # collateralOutHash
-                self.cursor += 4 # collateralOutIndex readUInt32LE
-                collateral_public_key_size = self._read_varint()
-                self.cursor += collateral_public_key_size # collateralPublicKey
-                public_key_size = self._read_varint()
-                self.cursor += public_key_size # publicKey
-                self.cursor += 8 # sigTime readUInt64LE
-                ip_size = self._read_varint()
-                self.cursor += ip_size # IP
-                sig_size = self._read_varint()
-                self.cursor += sig_size # sig
+                collateral_out_hash = self._read_nbytes(32) # collateralOutHash
+                collateral_out_index = self._read_le_uint32() # collateralOutIndex readUInt32LE
+                collateral_public_key = self._read_varbytes() # collateralPublicKey
+                public_key = self._read_varbytes() # publicKey
+                sig_time = self._read_le_int64()# sigTime
+                ip = self._read_varbytes() # IP
+                sig = self._read_varbytes() # sig
+                print(ip)
+                print(sig)
+
+                zelnode_tx_start = TxZelNode(
+                    version,
+                    inputs,
+                    outputs,
+                    locktime,
+                    type,
+                    collateral_out_hash,
+                    collateral_out_index,
+                    collateral_public_key,
+                    sig_time,
+                    ip,
+                    sig
+                )
+
+                return zelnode_tx_start
 
             if type == ZELNODE_CONFIRM_TX_TYPE:
-                self.cursor += 32 # collateralOutHash
-                self.cursor += 4 # collateralOutIndex readUInt32LE
-                self.cursor += 8 # sigTime readUInt64LE
-                self.cursor += 1 # benchmarkTier
-                self.cursor += 8 # benchmarkSigTime readUInt64LE
-                self.cursor += 1 # nUpdateType
-                sig_size = self._read_varint()
-                self.cursor += sig_size # sig
-                benchmark_sig_size = self._read_varint()
-                self.cursor += benchmark_sig_size # benchmarkSig
+                collateral_out_hash = self._read_nbytes(32) # collateralOutHash
+                collateral_out_index = self._read_le_uint32()  # collateralOutIndex readUInt32LE
+                sig_time = self._read_le_int64() # sigTime
+                benchmark_tier = self._read_varint() # benchmarkTier
+                benchmark_sig_time = self._read_le_int64() # benchmarkSigTime
+                update_type = self._read_varint() # nUpdateType
+                sig = self._read_varbytes() # sig
+                benchmark_sig = self._read_varbytes() # benchmarkSig
 
-            return zelnode_tx
+                zelnode_tx_confirm = TxZelNode(
+                    version,
+                    inputs,
+                    outputs,
+                    locktime,
+                    type,
+                    collateral_out_hash,
+                    collateral_out_index,
+                    sig_time,
+                    benchmark_tier,
+                    benchmark_sig_time,
+                    update_type,
+                    sig,
+                    benchmark_sig
+                )
+
+                return zelnode_tx_confirm
 
         else:
             base_tx = TxJoinSplit(
