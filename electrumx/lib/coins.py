@@ -3299,6 +3299,7 @@ class SIN(Coin):
         # else:
         #   return x25x_hash.getPoWHash(header)
 
+
 class Genesis(EquihashMixin, Coin):
     NAME = "Genesis"
     SHORTNAME = "GENX"
@@ -3322,6 +3323,41 @@ class Genesis(EquihashMixin, Coin):
         '''Given a header return hash'''
         height, = util.unpack_le_uint32_from(header, 68)
         return double_sha256(header)
+
+    @classmethod
+    def electrum_header(cls, header, height):
+        h = super().electrum_header(header, height)
+        h['reserved'] = hash_to_hex_str(header[72:100])
+        h['solution'] = hash_to_hex_str(header[140:])
+        return h
+
+
+class Bithereum(EquihashMixin, BitcoinMixin, Coin):
+    CHUNK_SIZE = 252
+    NAME = "Bithereum"
+    SHORTNAME = "BTH"
+    FORK_HEIGHT = 555555
+    P2PKH_VERBYTE = bytes.fromhex("19")
+    P2SH_VERBYTES = [bytes.fromhex("28")]
+    DESERIALIZER = lib_tx.DeserializerEquihashSegWit
+    TX_COUNT = 265026255
+    TX_COUNT_HEIGHT = 499923
+    TX_PER_BLOCK = 50
+    REORG_LIMIT = 1000
+    RPC_PORT = 18554
+    PEERS = [
+        'node1.bithereum.network s50002',
+        'node2.bithereum.network s50002'
+    ]
+
+    @classmethod
+    def header_hash(cls, header):
+        '''Given a header return hash'''
+        height, = util.unpack_le_uint32_from(header, 68)
+        if height >= cls.FORK_HEIGHT:
+            return double_sha256(header)
+        else:
+            return double_sha256(header[:68] + header[100:112])
 
     @classmethod
     def electrum_header(cls, header, height):
