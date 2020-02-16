@@ -391,7 +391,7 @@ class TxZelNodeStart(namedtuple("Tx", "version inputs outputs locktime type coll
     '''Class representing a ZelNode start transaction.'''
 
 
-class TxZelNodeConfirm(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index sig_time benchmark_tier benchmark_sig_time update_type sig benchmark_sig")):
+class TxZelNodeConfirm(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index sig_time benchmark_tier benchmark_sig_time update_type ip sig benchmark_sig")):
     '''Class representing a ZelNode confirm transaction.'''
 
 
@@ -423,7 +423,7 @@ class DeserializerZelCash(DeserializerEquihash):
                 collateral_out_index = self._read_le_uint32() # collateralOutIndex readUInt32LE
                 collateral_public_key = self._read_varbytes() # collateralPublicKey
                 public_key = self._read_varbytes() # publicKey
-                sig_time = self._read_le_int64()# sigTime
+                sig_time = self._read_le_uint32()# sigTime
                 ip = self._read_varbytes() # IP
                 sig = self._read_varbytes() # sig
 
@@ -447,10 +447,11 @@ class DeserializerZelCash(DeserializerEquihash):
             if type == ZELNODE_CONFIRM_TX_TYPE:
                 collateral_out_hash = self._read_nbytes(32) # collateralOutHash
                 collateral_out_index = self._read_le_uint32()  # collateralOutIndex readUInt32LE
-                sig_time = self._read_le_int64() # sigTime
+                sig_time = self._read_le_uint32() # sigTime
                 benchmark_tier = self._read_varint() # benchmarkTier
-                benchmark_sig_time = self._read_le_int64() # benchmarkSigTime
+                benchmark_sig_time = self._read_le_uint32() # benchmarkSigTime
                 update_type = self._read_varint() # nUpdateType
+                ip = self._read_varbytes() # IP
                 sig = self._read_varbytes() # sig
                 benchmark_sig = self._read_varbytes() # benchmarkSig
 
@@ -466,6 +467,7 @@ class DeserializerZelCash(DeserializerEquihash):
                     benchmark_tier,
                     benchmark_sig_time,
                     update_type,
+                    ip,
                     sig,
                     benchmark_sig
                 )
