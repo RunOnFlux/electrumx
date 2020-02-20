@@ -387,7 +387,7 @@ class DeserializerZcash(DeserializerEquihash):
         return base_tx
 
 
-class TxZelNodeStart(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index collateral_public_key public_key sig_time ip sig")):
+class TxZelNodeStart(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index collateral_public_key public_key sig_time sig")):
     '''Class representing a ZelNode start transaction.'''
 
 
@@ -424,7 +424,6 @@ class DeserializerZelCash(DeserializerEquihash):
                 collateral_public_key = self._read_varbytes() # collateralPublicKey
                 public_key = self._read_varbytes() # publicKey
                 sig_time = self._read_le_uint32()# sigTime
-                ip = self._read_varbytes() # IP
                 sig = self._read_varbytes() # sig
 
                 zelnode_tx_start = TxZelNodeStart(
@@ -438,7 +437,6 @@ class DeserializerZelCash(DeserializerEquihash):
                     collateral_public_key,
                     public_key,
                     sig_time,
-                    ip,
                     sig
                 )
 
