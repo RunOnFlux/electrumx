@@ -1362,8 +1362,8 @@ class ZelCashTestnet(ZelCash):
     P2PKH_VERBYTE = bytes.fromhex("1D25")
     P2SH_VERBYTES = [bytes.fromhex("1CBA")]
     WIF_BYTE = bytes.fromhex("EF")
-    GENESIS_HASH = ('00c1c5904ead2647d0d56e56165ec568'
-                    'b83bee34ce467ae473e75057327e5805')
+    GENESIS_HASH = ('0042202a64a929fc25cc10e68615ddbe'
+                    '38007b1b40da08acd3f530f83c79b9d1')
     TX_COUNT = 242312
     TX_COUNT_HEIGHT = 321685
     TX_PER_BLOCK = 2
