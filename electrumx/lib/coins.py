@@ -1348,12 +1348,26 @@ class ZelCash(EquihashMixin, Coin):
     P2SH_VERBYTES = [bytes.fromhex("1CBD")]
     GENESIS_HASH = ('00052461a5006c2e3b74ce48992a0869'
                     '5607912d5604c3eb8da25749b0900444')
-    DESERIALIZER = lib_tx.DeserializerZcash
+    DESERIALIZER = lib_tx.DeserializerZelCash
     TX_COUNT = 450539
     TX_COUNT_HEIGHT = 167114
     TX_PER_BLOCK = 3
     RPC_PORT = 16124
     REORG_LIMIT = 800
+
+
+class ZelCashTestnet(ZelCash):
+    SHORTNAME = "TEL"
+    NET = "testnet"
+    P2PKH_VERBYTE = bytes.fromhex("1D25")
+    P2SH_VERBYTES = [bytes.fromhex("1CBA")]
+    WIF_BYTE = bytes.fromhex("EF")
+    GENESIS_HASH = ('0042202a64a929fc25cc10e68615ddbe'
+                    '38007b1b40da08acd3f530f83c79b9d1')
+    TX_COUNT = 242312
+    TX_COUNT_HEIGHT = 321685
+    TX_PER_BLOCK = 2
+    RPC_PORT = 26124
 
 
 class Zclassic(EquihashMixin, Coin):
