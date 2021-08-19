@@ -3380,3 +3380,27 @@ class Bithereum(EquihashMixin, BitcoinMixin, Coin):
         h['reserved'] = hash_to_hex_str(header[72:100])
         h['solution'] = hash_to_hex_str(header[140:])
         return h
+
+
+class Raptoreum(Coin):
+    NAME = "Raptoreum"
+    SHORTNAME = "RTM"
+    NET = "mainnet"
+    XPUB_VERBYTES = bytes.fromhex("0488b21e")
+    XPRV_VERBYTES = bytes.fromhex("0488ade4")
+    GENESIS_HASH = ('b79e5df07278b9567ada8fc655ffbfa9'
+    		     'd3f586dc38da3dd93053686f41caeea0')
+    P2PKH_VERBYTE = bytes.fromhex("3c")
+    P2SH_VERBYTES = (bytes.fromhex("10"),)
+    WIF_BYTE = bytes.fromhex("80")
+    TX_COUNT_HEIGHT = 29048
+    TX_COUNT = 79817
+    TX_PER_BLOCK = 4
+    RPC_PORT = 10225
+    PEERS = [
+       'ny1.raptoreum.com t',
+       'ger1.raptoreum.com t'
+    ]
+    SESSIONCLS = DashElectrumX
+    DAEMON = daemon.DashDaemon
+    DESERIALIZER = lib_tx_dash.DeserializerDash
