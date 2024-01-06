@@ -387,15 +387,18 @@ class DeserializerZcash(DeserializerEquihash):
         return base_tx
 
 
-class TxZelNodeStart(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index collateral_public_key public_key sig_time sig")):
-    '''Class representing a ZelNode start transaction.'''
+class TxFluxNodeStartV5(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index collateral_public_key public_key sig_time sig")):
+    '''Class representing a FluxNode v5 start transaction.'''
 
 
-class TxZelNodeConfirm(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index sig_time benchmark_tier benchmark_sig_time update_type ip sig benchmark_sig")):
-    '''Class representing a ZelNode confirm transaction.'''
+class TxFluxNodeConfirm(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index sig_time benchmark_tier benchmark_sig_time update_type ip sig benchmark_sig")):
+    '''Class representing a FluxNode v5 confirm transaction.'''
+
+class TxFluxNodeStartV6(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index p2sh_redeem_script public_key sig_time sig")):
+    '''Class representing a FluxNode v6 start transaction.'''
 
 
-class DeserializerZelCash(DeserializerEquihash):
+class DeserializerFlux(DeserializerEquihash):
     def read_tx(self):
         header = self._read_le_uint32()
         overwintered = ((header >> 31) == 1)
@@ -407,18 +410,21 @@ class DeserializerZelCash(DeserializerEquihash):
 
         is_overwinter_v3 = version == 3
         is_sapling_v4 = version == 4
-        is_zelnode_v5 = version == 5
+        is_fluxnode_v5 = version == 5
+        is_fluxnode_v6 = version == 6
 
-        ZELNODE_START_TX_TYPE = 2;
-        ZELNODE_CONFIRM_TX_TYPE = 4;
+        FLUXNODE_START_TX_TYPE = 2;
+        FLUXNODE_CONFIRM_TX_TYPE = 4;
+        FLUXNODE_INTERNAL_NORMAL_TX_VERSION = 1;
+        FLUXNODE_INTERNAL_P2SH_TX_VERSION = 2;
 
-        if is_zelnode_v5:
+        if is_fluxnode_v5:
             type = self._read_varint()
             inputs = []
             outputs = []
             locktime = 0
 
-            if type == ZELNODE_START_TX_TYPE:
+            if type == FLUXNODE_START_TX_TYPE:
                 collateral_out_hash = self._read_nbytes(32) # collateralOutHash
                 collateral_out_index = self._read_le_uint32() # collateralOutIndex readUInt32LE
                 collateral_public_key = self._read_varbytes() # collateralPublicKey
@@ -426,7 +432,7 @@ class DeserializerZelCash(DeserializerEquihash):
                 sig_time = self._read_le_uint32()# sigTime
                 sig = self._read_varbytes() # sig
 
-                zelnode_tx_start = TxZelNodeStart(
+                fluxnode_tx_start = TxFluxNodeStartV5(
                     version,
                     inputs,
                     outputs,
@@ -440,9 +446,9 @@ class DeserializerZelCash(DeserializerEquihash):
                     sig
                 )
 
-                return zelnode_tx_start
+                return fluxnode_tx_start
 
-            if type == ZELNODE_CONFIRM_TX_TYPE:
+            if type == FLUXNODE_CONFIRM_TX_TYPE:
                 collateral_out_hash = self._read_nbytes(32) # collateralOutHash
                 collateral_out_index = self._read_le_uint32()  # collateralOutIndex readUInt32LE
                 sig_time = self._read_le_uint32() # sigTime
@@ -453,7 +459,7 @@ class DeserializerZelCash(DeserializerEquihash):
                 sig = self._read_varbytes() # sig
                 benchmark_sig = self._read_varbytes() # benchmarkSig
 
-                zelnode_tx_confirm = TxZelNodeConfirm(
+                fluxnode_tx_confirm = TxFluxNodeConfirm(
                     version,
                     inputs,
                     outputs,
@@ -470,7 +476,94 @@ class DeserializerZelCash(DeserializerEquihash):
                     benchmark_sig
                 )
 
-                return zelnode_tx_confirm
+                return fluxnode_tx_confirm
+
+        if is_fluxnode_v6:
+            type = self._read_varint()
+            inputs = []
+            outputs = []
+            locktime = 0
+
+            if type == FLUXNODE_START_TX_TYPE:
+                nFluxTxVersion = self._read_le_uint32() # nFluxTxVersion readUInt32LE
+
+                if nFluxTxVersion == FLUXNODE_INTERNAL_NORMAL_TX_VERSION:
+                    collateral_out_hash = self._read_nbytes(32) # collateralOutHash
+                    collateral_out_index = self._read_le_uint32() # collateralOutIndex readUInt32LE
+                    collateral_public_key = self._read_varbytes() # collateralPublicKey
+                    public_key = self._read_varbytes() # publicKey
+                    sig_time = self._read_le_uint32()# sigTime
+                    sig = self._read_varbytes() # sig
+
+                    fluxnode_tx_start = TxFluxNodeStartV5(
+                        version,
+                        inputs,
+                        outputs,
+                        locktime,
+                        type,
+                        collateral_out_hash,
+                        collateral_out_index,
+                        collateral_public_key,
+                        public_key,
+                        sig_time,
+                        sig
+                    )
+
+                    return fluxnode_tx_start
+                
+                if nFluxTxVersion == FLUXNODE_INTERNAL_P2SH_TX_VERSION:
+                    collateral_out_hash = self._read_nbytes(32) # collateralOutHash
+                    collateral_out_index = self._read_le_uint32() # collateralOutIndex readUInt32LE
+                    public_key = self._read_varbytes() # publicKey
+                    p2sh_redeem_script = self._read_varbytes() # P2SHRedeemScript
+                    sig_time = self._read_le_uint32()# sigTime
+                    sig = self._read_varbytes() # sig
+
+                    fluxnode_tx_start = TxFluxNodeStartV6(
+                        version,
+                        inputs,
+                        outputs,
+                        locktime,
+                        type,
+                        collateral_out_hash,
+                        collateral_out_index,
+                        p2sh_redeem_script,
+                        public_key,
+                        sig_time,
+                        sig
+                    )
+
+                    return fluxnode_tx_start
+
+            if type == FLUXNODE_CONFIRM_TX_TYPE:
+                collateral_out_hash = self._read_nbytes(32) # collateralOutHash
+                collateral_out_index = self._read_le_uint32()  # collateralOutIndex readUInt32LE
+                sig_time = self._read_le_uint32() # sigTime
+                benchmark_tier = self._read_varint() # benchmarkTier
+                benchmark_sig_time = self._read_le_uint32() # benchmarkSigTime
+                update_type = self._read_varint() # nUpdateType
+                ip = self._read_varbytes() # IP
+                sig = self._read_varbytes() # sig
+                benchmark_sig = self._read_varbytes() # benchmarkSig
+
+                fluxnode_tx_confirm = TxFluxNodeConfirm(
+                    version,
+                    inputs,
+                    outputs,
+                    locktime,
+                    type,
+                    collateral_out_hash,
+                    collateral_out_index,
+                    sig_time,
+                    benchmark_tier,
+                    benchmark_sig_time,
+                    update_type,
+                    ip,
+                    sig,
+                    benchmark_sig
+                )
+
+                return fluxnode_tx_confirm
 
         else:
             base_tx = TxJoinSplit(
