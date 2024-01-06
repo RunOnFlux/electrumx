@@ -1372,8 +1372,8 @@ class FluxTestnet(Flux):
     RPC_PORT = 26124
 
 class ZelCash(EquihashMixin, Coin):
-    NAME = "Flux"
-    SHORTNAME = "FLUX"
+    NAME = "ZelCash"
+    SHORTNAME = "ZEL"
     NET = "mainnet"
     P2PKH_VERBYTE = bytes.fromhex("1CB8")
     P2SH_VERBYTES = [bytes.fromhex("1CBD")]
@@ -1388,7 +1388,7 @@ class ZelCash(EquihashMixin, Coin):
 
 
 class ZelCashTestnet(Flux):
-    SHORTNAME = "TFLUX"
+    SHORTNAME = "TZEL"
     NET = "testnet"
     P2PKH_VERBYTE = bytes.fromhex("1D25")
     P2SH_VERBYTES = [bytes.fromhex("1CBA")]
