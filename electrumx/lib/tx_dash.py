@@ -361,21 +361,20 @@ class DeserializerDash(Deserializer):
     PRO_UP_REG_TX = 3
     PRO_UP_REV_TX = 4
     CB_TX = 5
-    SUB_TX_REGISTER = 8
-    SUB_TX_TOPUP = 9
-    SUB_TX_RESET_KEY = 10
-    SUB_TX_CLOSE_ACCOUNT = 11
-
+#     SUB_TX_REGISTER = 8
+#     SUB_TX_TOPUP = 9
+#     SUB_TX_RESET_KEY = 10
+#     SUB_TX_CLOSE_ACCOUNT = 11
     SPEC_TX_HANDLERS = {
         PRO_REG_TX: DashProRegTx,
         PRO_UP_SERV_TX: DashProUpServTx,
         PRO_UP_REG_TX: DashProUpRegTx,
         PRO_UP_REV_TX: DashProUpRevTx,
         CB_TX: DashCbTx,
-        SUB_TX_REGISTER: DashSubTxRegister,
-        SUB_TX_TOPUP: DashSubTxTopup,
-        SUB_TX_RESET_KEY: DashSubTxResetKey,
-        SUB_TX_CLOSE_ACCOUNT: DashSubTxCloseAccount,
+#         SUB_TX_REGISTER: DashSubTxRegister,
+#         SUB_TX_TOPUP: DashSubTxTopup,
+#         SUB_TX_RESET_KEY: DashSubTxResetKey,
+#         SUB_TX_CLOSE_ACCOUNT: DashSubTxCloseAccount,
     }
 
     def _read_outpoint(self):
