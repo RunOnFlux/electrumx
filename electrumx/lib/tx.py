@@ -394,7 +394,7 @@ class TxFluxNodeStartV5(namedtuple("Tx", "version inputs outputs locktime type c
 class TxFluxNodeConfirm(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index sig_time benchmark_tier benchmark_sig_time update_type ip sig benchmark_sig")):
     '''Class representing a FluxNode v5 confirm transaction.'''
 
-class TxFluxNodeStartV6(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index p2sh_redeem_script public_key sig_time sig")):
+class TxFluxNodeStartV6(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index public_key p2sh_redeem_script sig_time sig")):
     '''Class representing a FluxNode v6 start transaction.'''
 
 
@@ -406,7 +406,7 @@ class TxFluxNodeStartWithDelegates(namedtuple("Tx", "version inputs outputs lock
     '''Class representing a FluxNode start transaction with delegate support.'''
 
 
-class TxFluxNodeStartV6WithDelegates(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index p2sh_redeem_script public_key sig_time sig using_delegates delegate_data")):
+class TxFluxNodeStartV6WithDelegates(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index public_key p2sh_redeem_script sig_time sig using_delegates delegate_data")):
     '''Class representing a FluxNode v6 P2SH start transaction with delegate support.'''
 
 
@@ -599,14 +599,14 @@ class DeserializerFlux(DeserializerEquihash):
                         return TxFluxNodeStartV6WithDelegates(
                             version, inputs, outputs, locktime, type,
                             collateral_out_hash, collateral_out_index,
-                            p2sh_redeem_script, public_key, sig_time, sig,
+                            public_key, p2sh_redeem_script, sig_time, sig,
                             using_delegates, delegate_data
                         )
                     else:
                         return TxFluxNodeStartV6(
                             version, inputs, outputs, locktime, type,
                             collateral_out_hash, collateral_out_index,
-                            p2sh_redeem_script, public_key, sig_time, sig
+                            public_key, p2sh_redeem_script, sig_time, sig
                         )
 
             if type == FLUXNODE_CONFIRM_TX_TYPE:
