@@ -1355,6 +1355,22 @@ class Flux(EquihashMixin, Coin):
     TX_PER_BLOCK = 3
     RPC_PORT = 16124
     REORG_LIMIT = 800
+    PON_VERSION = 100
+
+    @classmethod
+    def header_hash(cls, header):
+        '''Given a header return hash'''
+        from electrumx.lib.util import unpack_le_uint32_from
+        version, = unpack_le_uint32_from(header, 0)
+        if version >= cls.PON_VERSION:
+            # PON block: hash is calculated without signature
+            # Header is: version(4) + prevHash(32) + merkleRoot(32) + saplingRoot(32) + time(4) + bits(4) + nodesCollateral(36) + vchBlockSig
+            # Hash should exclude vchBlockSig
+            header_without_sig = header[:144]  # First 144 bytes (everything before vchBlockSig)
+            return double_sha256(header_without_sig)
+        else:
+            # POW block: use default hash
+            return double_sha256(header)
 
 
 class FluxTestnet(Flux):
