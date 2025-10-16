@@ -398,7 +398,41 @@ class TxFluxNodeStartV6(namedtuple("Tx", "version inputs outputs locktime type c
     '''Class representing a FluxNode v6 start transaction.'''
 
 
+class FluxnodeDelegates(namedtuple("Delegates", "delegate_version delegate_type delegate_starting_keys")):
+    '''Class representing FluxNode delegate data.'''
+
+
+class TxFluxNodeStartWithDelegates(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index collateral_public_key public_key sig_time sig using_delegates delegate_data")):
+    '''Class representing a FluxNode start transaction with delegate support.'''
+
+
+class TxFluxNodeStartV6WithDelegates(namedtuple("Tx", "version inputs outputs locktime type collateral_out_hash collateral_out_index p2sh_redeem_script public_key sig_time sig using_delegates delegate_data")):
+    '''Class representing a FluxNode v6 P2SH start transaction with delegate support.'''
+
+
 class DeserializerFlux(DeserializerEquihash):
+    PON_VERSION = 100
+
+    def read_header(self, static_header_size):
+        '''Return the block header bytes, handling both POW and PON formats'''
+        start = self.cursor
+        version = self._read_le_uint32()
+        self.cursor = start
+
+        if version >= self.PON_VERSION:
+            # PON block: version(4) + prevHash(32) + merkleRoot(32) + saplingRoot(32) + time(4) + bits(4) + nodesCollateral(8) + vchBlockSig
+            self.cursor += 76  # Basic header without nonce/solution
+            self.cursor += 8   # nodesCollateral (int64)
+            sig_size = self._read_varint()
+            self.cursor += sig_size
+        else:
+            # POW block: use parent class method
+            return super().read_header(static_header_size)
+
+        header_end = self.cursor
+        self.cursor = start
+        return self._read_nbytes(header_end)
+
     def read_tx(self):
         header = self._read_le_uint32()
         overwintered = ((header >> 31) == 1)
@@ -415,8 +449,15 @@ class DeserializerFlux(DeserializerEquihash):
 
         FLUXNODE_START_TX_TYPE = 2;
         FLUXNODE_CONFIRM_TX_TYPE = 4;
+
+        # Legacy version constants for backward compatibility
         FLUXNODE_INTERNAL_NORMAL_TX_VERSION = 1;
         FLUXNODE_INTERNAL_P2SH_TX_VERSION = 2;
+
+        # Bit-based version system
+        FLUXNODE_TX_TYPE_NORMAL_BIT = 0x01;
+        FLUXNODE_TX_TYPE_P2SH_BIT = 0x02;
+        FLUXNODE_TX_FEATURE_DELEGATES_BIT = 0x0100;
 
         if is_fluxnode_v5:
             type = self._read_varint()
@@ -484,56 +525,89 @@ class DeserializerFlux(DeserializerEquihash):
             outputs = []
             locktime = 0
 
-            if type == FLUXNODE_START_TX_TYPE:
-                nFluxTxVersion = self._read_le_uint32() # nFluxTxVersion readUInt32LE
+            if (type & FLUXNODE_START_TX_TYPE) == FLUXNODE_START_TX_TYPE:
+                nFluxTxVersion = self._read_le_uint32()
 
-                if nFluxTxVersion == FLUXNODE_INTERNAL_NORMAL_TX_VERSION:
-                    collateral_out_hash = self._read_nbytes(32) # collateralOutHash
-                    collateral_out_index = self._read_le_uint32() # collateralOutIndex readUInt32LE
-                    collateral_public_key = self._read_varbytes() # collateralPublicKey
-                    public_key = self._read_varbytes() # publicKey
-                    sig_time = self._read_le_uint32()# sigTime
-                    sig = self._read_varbytes() # sig
+                # Check for backward compatibility (exact match) or bit-based check
+                is_normal_tx = (nFluxTxVersion == FLUXNODE_INTERNAL_NORMAL_TX_VERSION) or \
+                               ((nFluxTxVersion & FLUXNODE_TX_TYPE_NORMAL_BIT) != 0)
+                is_p2sh_tx = (nFluxTxVersion == FLUXNODE_INTERNAL_P2SH_TX_VERSION) or \
+                             ((nFluxTxVersion & FLUXNODE_TX_TYPE_P2SH_BIT) != 0)
+                has_delegates = (nFluxTxVersion & FLUXNODE_TX_FEATURE_DELEGATES_BIT) != 0
 
-                    fluxnode_tx_start = TxFluxNodeStartV5(
-                        version,
-                        inputs,
-                        outputs,
-                        locktime,
-                        type,
-                        collateral_out_hash,
-                        collateral_out_index,
-                        collateral_public_key,
-                        public_key,
-                        sig_time,
-                        sig
-                    )
+                if is_normal_tx and not (nFluxTxVersion & FLUXNODE_TX_TYPE_P2SH_BIT):
+                    collateral_out_hash = self._read_nbytes(32)
+                    collateral_out_index = self._read_le_uint32()
+                    collateral_public_key = self._read_varbytes()
+                    public_key = self._read_varbytes()
+                    sig_time = self._read_le_uint32()
+                    sig = self._read_varbytes()
 
-                    return fluxnode_tx_start
-                
-                if nFluxTxVersion == FLUXNODE_INTERNAL_P2SH_TX_VERSION:
-                    collateral_out_hash = self._read_nbytes(32) # collateralOutHash
-                    collateral_out_index = self._read_le_uint32() # collateralOutIndex readUInt32LE
-                    public_key = self._read_varbytes() # publicKey
-                    p2sh_redeem_script = self._read_varbytes() # P2SHRedeemScript
-                    sig_time = self._read_le_uint32()# sigTime
-                    sig = self._read_varbytes() # sig
+                    # Handle delegate data if feature bit is set
+                    using_delegates = False
+                    delegate_data = None
+                    if has_delegates:
+                        using_delegates = (self._read_byte() != 0)
+                        if using_delegates:
+                            delegate_version = self._read_byte()
+                            delegate_type = self._read_byte()
+                            delegate_starting_keys = []
+                            if delegate_version == 1 and delegate_type == 1:
+                                num_keys = self._read_varint()
+                                for _ in range(num_keys):
+                                    delegate_starting_keys.append(self._read_varbytes())
+                            delegate_data = FluxnodeDelegates(delegate_version, delegate_type, delegate_starting_keys)
 
-                    fluxnode_tx_start = TxFluxNodeStartV6(
-                        version,
-                        inputs,
-                        outputs,
-                        locktime,
-                        type,
-                        collateral_out_hash,
-                        collateral_out_index,
-                        p2sh_redeem_script,
-                        public_key,
-                        sig_time,
-                        sig
-                    )
+                    if has_delegates:
+                        return TxFluxNodeStartWithDelegates(
+                            version, inputs, outputs, locktime, type,
+                            collateral_out_hash, collateral_out_index,
+                            collateral_public_key, public_key, sig_time, sig,
+                            using_delegates, delegate_data
+                        )
+                    else:
+                        return TxFluxNodeStartV5(
+                            version, inputs, outputs, locktime, type,
+                            collateral_out_hash, collateral_out_index,
+                            collateral_public_key, public_key, sig_time, sig
+                        )
 
-                    return fluxnode_tx_start
+                elif is_p2sh_tx:
+                    collateral_out_hash = self._read_nbytes(32)
+                    collateral_out_index = self._read_le_uint32()
+                    public_key = self._read_varbytes()
+                    p2sh_redeem_script = self._read_varbytes()
+                    sig_time = self._read_le_uint32()
+                    sig = self._read_varbytes()
+
+                    # Handle delegate data if feature bit is set
+                    using_delegates = False
+                    delegate_data = None
+                    if has_delegates:
+                        using_delegates = (self._read_byte() != 0)
+                        if using_delegates:
+                            delegate_version = self._read_byte()
+                            delegate_type = self._read_byte()
+                            delegate_starting_keys = []
+                            if delegate_version == 1 and delegate_type == 1:
+                                num_keys = self._read_varint()
+                                for _ in range(num_keys):
+                                    delegate_starting_keys.append(self._read_varbytes())
+                            delegate_data = FluxnodeDelegates(delegate_version, delegate_type, delegate_starting_keys)
+
+                    if has_delegates:
+                        return TxFluxNodeStartV6WithDelegates(
+                            version, inputs, outputs, locktime, type,
+                            collateral_out_hash, collateral_out_index,
+                            p2sh_redeem_script, public_key, sig_time, sig,
+                            using_delegates, delegate_data
+                        )
+                    else:
+                        return TxFluxNodeStartV6(
+                            version, inputs, outputs, locktime, type,
+                            collateral_out_hash, collateral_out_index,
+                            p2sh_redeem_script, public_key, sig_time, sig
+                        )
 
             if type == FLUXNODE_CONFIRM_TX_TYPE:
                 collateral_out_hash = self._read_nbytes(32) # collateralOutHash
